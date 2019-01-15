@@ -1,0 +1,168 @@
+﻿@model Chaat.Models.Users.User
+
+<script>
+    var friends = [];
+    var messages = {};
+    var friendId = 0;
+
+    document.getElementById("user-name").innerHTML = '@Model.Name';
+
+    function openConversation(index) {
+        var element = document.getElementById('conversations-container');
+        element.style.display = 'block';
+        var messageDiv = document.getElementById('message-table');
+        socketTo = friends[index].SocketID;
+        document.getElementById('friend-name').innerHTML = friends[index].Name;
+        friendIndex = friends[index].SenderID;
+        messageDiv.innerHTML = messages[friendIndex];
+        var p = document.getElementById(friendId + 'c');
+        friendId = friendIndex;
+        p.id = friendIndex + 'c';
+        p.style.display = document.getElementById(friendIndex + 'i').style.display == 'block' ? 'block' : 'none';
+    }
+
+    function hideContacts() {
+        var element = document.getElementById('contacts');
+        if (element.style.left != '-250px')
+        {
+            element.style.left = '-250px';
+        }
+        else
+        {
+            element.style.left = '0';
+        }
+    }
+
+    function sendReadNotification()
+    {
+        sendReadInfo = 1;
+    }
+
+    function openNotifications()
+    {
+        var notificationsDiv = document.getElementById("notifications");
+        if (notificationsDiv.style.display == 'block')
+        {
+            closeNotifications();
+            return;
+        }
+        var element = document.getElementById("notification-index");
+        element.innerHTML = 0;
+        if (notificationsIndex > -1)
+        {
+            notificationsIndex = 0;
+            notificationsDiv.style.display = "block";
+        }
+        element.style.display = "none";
+    }
+
+    function closeNotifications()
+    {
+        var container = $("#notifications");
+        container.hide();
+
+    }
+
+
+
+
+</script>
+    
+<style>
+    #contacts {
+        width: 250px;
+        height: 100vh;
+        position: fixed;
+        left: 0;
+        top: 50px;
+        box-shadow: 4px 4px 16px 4px rgba(0,0,0,0.2), -4px 4px 20px 4px rgba(0,0,0,0.19);
+        z-index: 100;
+        background-color: white;
+        overflow-y: hidden;
+        -webkit-transition: left 0.8s; /* For Safari 3.1 to 6.0 */
+        transition: left 0.5s;
+    }
+        #contacts p {
+            width: 190px;
+            overflow: hidden;
+            margin-top: -30px;
+            margin-left: 25px;
+            font-size: 90%;
+        }
+
+    .contact {
+        border-bottom: inset lightgray thin;
+    }
+
+    #contacts ul{
+        list-style:none;
+        text-decoration:none;
+    }
+
+    #contacts ul, li, div{
+        margin: 0 0 0 0;
+        padding: 0 0 0 0;
+    }
+
+        #contacts li {
+            height:50px;
+        }
+
+        #contacts div {
+            height:50px;
+        }
+
+        #contacts .contact:hover {
+            background-color: #c9cdd3;
+            cursor: pointer;
+        }
+    .online-symbol{
+        color: lime;position: absolute;width: 20px;font-size: 180%;padding: 0 0 0 0;margin: -10px 0 0 0;height: 40px;
+    }
+
+    .hide-img-class {
+        position:fixed; 
+        top:70px;
+        margin-left:240px;
+    }
+        .hide-img-class:hover {
+            -ms-transform: translate(0, 5px); /* IE 9 */
+            -webkit-transform: translate(0, 5px); /* Safari */
+            transform: translate(0, 5px);
+            cursor:pointer;
+        }
+</style>
+
+
+    <div id="contacts">
+        <ul>
+            @for(int i = 0; i < Model.friends.Count; i++)
+            {
+                <li>
+                    <div>
+                        <div class="contact" onclick="openConversation(@i); hideContacts()">
+                            <img id="@(Model.friends[i].Id)i" src="~/images/img_online.png" class="online-symbol" style="color: lime;width: 12px;font-size: 180%;padding: 0 0 0 0;margin: 2px 0 0 0;height: 12px; display:none"/>
+                            <img class="img-profile" src="@Model.friends[i].PhotoLink" style="float:left" />
+                            <p style="float:right">@(Model.friends[i].Name == Model.Name ? "Ja" : Model.friends[i].Name)</p>
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+        <img id="hide-contacts" class="hide-img-class" onclick="hideContacts()"  src="/images/img_contacts.png" height="105" width="64" />
+    </div>
+
+@for (int i = 0; i < Model.friends.Count; i++)
+            {
+    <script>
+                    var obj = { Name : "@Model.friends[i].Name", SocketID : "@Model.friends[i].AspUserID", SenderID : "@Model.friends[i].Id", };
+                    friends.push(obj);
+                   messages["@Model.friends[i].Id"] = " ";
+    </script>
+}
+
+@await Html.PartialAsync("message")
+
+
+
+

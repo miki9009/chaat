@@ -1,0 +1,21 @@
+﻿@model ApplicationUser
+
+
+<h2 style="color:red">@ViewData["Email"]</h2>
+
+<div  class="container" >
+
+    <div  style="margin-top:30px">
+        <h1 style="color:white; text-align:center; font-family: 'Chewy', cursive; font-size:800%">CHAAT!</h1>
+        <h4 style="color:white; text-align:center">Aktywacja</h4>
+
+        <p style="text-align:center; color:white; margin-top:40px; margin-bottom:100px"><strong>Aby dokończyć aktywację konta kliknij na link wysłany na adres e-mail podany przy rejestracji.</strong></p>
+        <div style="width:5%; min-width:200px; margin:auto">
+            <a asp-action="ResendMail" class="chaat-button">Prześlij ponownie</a>
+        </div>
+
+    </div>
+
+
+
+</div>

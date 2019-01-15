@@ -1,0 +1,23 @@
+﻿<ul id="notifications" style="display:none; overflow-y:scroll; max-height:500px">
+
+
+</ul>
+
+<script>
+    function addNotification(notification)
+    {
+            var conversationId = '1';
+            for (var i = 0; i < friends.length; i++) {
+                if (notification.SenderID == friends[i].SenderID)
+                {
+                    conversationId = i;
+                    
+                }
+            }
+            var str = document.getElementById('notifications').innerHTML;
+            document.getElementById('notifications').innerHTML = '<li onclick="openConversation(' + conversationId + ');sendReadNotification()" id="' + notification.SenderID + '" style="padding:5px 0px 5px 5px; border-bottom: solid medium lightgray;"><p style="float:right; font-size:50%">' + getDate() + '</p><img class="img-profile" style="float:left; margin-left:-10px" src="' + notification.PhotoLink + '"/><ul><li style="margin-left:10px"><b>' + notification.SenderName + '</b></li><li style="margin-left:10px"><p style="font-size:80%; max-height:100px">' + notification.Body + '</p></li></ul></li >' + str;
+                
+    }
+    
+    
+</script>

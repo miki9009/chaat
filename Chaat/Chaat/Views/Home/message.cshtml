@@ -1,0 +1,39 @@
+﻿@model Chaat.Models.Users.User
+
+
+<div  id="conversations-container" class="row"  >
+    
+    <div id="message-div" class="col-md-8 col-md-offset-2 chaat-div" style="padding: 0 0 150px 0; margin-top:50px;  font:120%; background-color:white;  ">
+        <img id="0c" src="~/images/img_online.png" style="color: lime;width: 20px;font-size: 250%;padding: 5px 5px 5px 5px;margin: 2px 0 0 0;height: 20px; float:left; display:none"/>
+        <div class="chaat-title" id="friend-name" style="text-align:left; margin:0 0 0 0; border-radius: 8px 8px 0 0; ">
+            Jan Kowalski
+        </div>
+
+        <div id="msgs" style="margin-top:10px; height:100%; position:relative; overflow-y:scroll;border:solid thin lightgray; margin-left:5px; margin-right:5px">
+
+            <table id="message-table" style="width:100%"></table>
+        </div>
+
+        <div id="send-message-div" class="col-md-12">
+            <textarea class="form-control" rows="3" style="width:100%; resize: none;" id="MessageField" placeholder="Wiadomość..."></textarea>
+        </div>
+    </div>
+
+</div>
+
+
+<script>
+    function resizeHeight() {
+        var element = document.getElementById('message-div');
+        element.style.height = '91vh';
+    }
+    document.addEventListener("DOMContentLoaded", function (event) {
+        resizeHeight();
+    });
+
+</script>
+
+
+
+
+

@@ -1,0 +1,221 @@
+﻿@model Chaat.Models.Users.User
+@using Microsoft.Extensions.WebEncoders;
+@using System.Text.Encodings.Web;
+
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await Html.PartialAsync("Content")
+
+<script>
+    addCookie();
+</script>
+
+@section Scripts {
+    
+    <script>
+        var socketTo = '@Model.AspUserID';                                                                                //SOCKET DO KTOREGO WYSYLAMY WIADOMOSC
+        var friendIndex = 0;
+        var notifications = 0;
+
+    $(function initialize() {
+        var userName = '@Model.Name';
+        var protocol = location.protocol === "https:" ? "wss:" : "ws:";
+        var wsUri = protocol + "//" + window.location.host;
+        var socket = new WebSocket(wsUri);
+        socket.onopen = e => {
+            console.log("socket opened", e);
+        };
+
+        socket.onclose = function (e) {
+            console.log("socket closed", e);
+        };
+
+
+
+        //ODBIOR MESSAGE
+        socket.onmessage = function (e) {                                                                   //ODBIOR WIADOMOSCI
+            console.log(e.data);
+            var oMessage = JSON.parse(e.data);                                                              //WIADOMOŚC NA JSON
+
+            var addToDiv;
+            if (oMessage.SenderID < 0)
+            {
+                whoIsOnline(oMessage.Body);
+                return;
+            }
+            if (oMessage.SenderID == friendIndex || oMessage.SenderID == @Model.Id) {                           //NOTIFICATION: Sprawdzamy czy okienko u kolegi do ktorego piszemy jest otwarte, jak nie to ślemy notification
+                addToDiv = 1;                                                                                   //TWORZENIE DIV WIADOMOSCI
+                createMessageDiv(oMessage, addToDiv, friendId); 
+            }
+            else {                                                                     //NOTIFICATION
+                createMessageDiv(oMessage, addToDiv, oMessage.SenderID); 
+                notifications++;
+                var element = document.getElementById("notification-index");
+                element.style.display = 'block';
+                element.innerHTML = notifications;
+                audio.play();               
+            }
+
+
+        };
+
+        socket.onerror = function (e) {
+            console.error(e.data);
+        };
+
+
+        //Wysyłanie inputu
+        $('#MessageField').keypress(function (e) {
+            if (e.which != 13) {
+                return;
+            }
+            sendMessage(e);                                                                                     //WYŚLIJ WIADOMOŚC
+        });
+
+
+
+        function sendMessage(e) {
+            e.preventDefault();
+            console.log(socket);
+            var message = '{ "Body": "' + $('#MessageField').val() + '", "PhotoLink": "' + img_src + '", "SenderID": "' +@Model.Id+'", "SocketTo": "' + socketTo + '" }';
+            socket.send(message);
+            $('#MessageField').val('');
+            window.scrollTo(0, document.body.scrollHeight);
+            return false;
+
+        }
+
+
+        });
+
+        //ZMIENNE----------------------------------------------------------
+
+        /*POTEM BEDZIE MOZNA USUNAC JAK BEDZIE BAZA DANYCH i IDUżytkownika*/
+        var last_message;
+        ///////////////////////////////////////////////////////
+
+        //Czy jest focus? Jak nie to daj dźwięk
+        var audio = new Audio('/sounds/notification.wav');
+
+        //TEST AVATAROW
+        var img_src = '@Model.PhotoLink';
+        //-----------------------------------------------------------------
+
+        //Sprawdza ciąg znaków od spacji do spacji (dla emoticons)
+        function addEmoticons(array) {
+
+            var returnText = '';
+            for (var i = 0; i < array.length; i++)
+            {
+                returnText += findEmoticons(array[i]);
+            }
+            return returnText;
+        }
+
+        //sprawdza czy przekazany string odpowiada którejś emoticonie
+        function findEmoticons(emot) {
+            emot = ' ' + emot;
+            switch (emot) {
+                case ' :)':
+                    return ' <img src="/images/emoticons/e_smile.png"/>';
+                case ' :D':
+                case ' :d':
+                case ' ;D':
+                case ' ;d':
+                    return ' <img src="/images/emoticons/e_laugh_basic.png"/>';
+                case ' :p':
+                case ' :P':
+                case ' ;p':
+                case ' ;P':
+                    return '<img src="/images/emoticons/e_tongue.png"/>';
+                case ' xd':
+                case ' xD':
+                case ' XD':
+                case ' Xd':
+                    return ' <img src="/images/emoticons/e_laugh_extreme.png"/>';
+                case ' :(':
+                    return ' <img src="/images/emoticons/e_sad.png"/>';
+                case ' ;(':
+                    return ' <img src="/images/emoticons/e_cry.png"/>';
+                case ' ;/':
+                case ' :/':
+                    return ' <img src="/images/emoticons/e_worried.png"/>';
+                case ' :*':
+                case ' ;*':
+                    return ' <img src="/images/emoticons/e_kiss.png"/>';
+                default:
+                    return emot;
+            }
+
+        }
+
+
+        //Tworzy Nowy Div wiadomości
+        function createMessageDiv(oMessage, divOpen, index)
+        {
+            var style;
+            var color;
+            var p_style;
+            if (oMessage.SenderID == @Model.Id) {
+                style = 'style="float:left"';
+                color = 'color:white';
+                p_style = 'style="font-size:70%; color:black; float:left; margin-top:-25px"';
+            }
+            else {
+                style = 'style="background-color:white; border-width: thin; border-color:#c3c3c3; color:#1f1f1f; float:right"';
+                color = 'color:#7e7a8b';
+                p_style = 'style="font-size:70%; color:black; float:right; margin-top:-25px"';
+                audio.play();
+            }
+            var array = oMessage.Body.split(" ");                                                               //DZIELENIE WIADOMOŚCI
+
+            var message = addEmoticons(array);                                                                  //DODANIE EMOTICONS
+
+            var date = new Date();                                                                              //GODZINA
+            var hour = date.getHours();
+            var minute = date.getMinutes();
+            var second = date.getSeconds();
+
+            var messageDiv = document.getElementById('message-table');                                          //DODANIE DIV Z WIADOMOŚCIĄ
+            var inner = '<tr><td><img class="img-profile" ' + style + ' src="' + oMessage.PhotoLink + '" /><div class="msg" ' + style + '"><p ' + p_style + '>' + (hour < 10 ? "0" + hour : hour) + ":" + (minute < 10 ? "0" + minute : minute) + ":" + (second < 10 ? "0" + second : second) + '</p>' + message + '</div></td></tr>';
+            messages[index] += inner;
+            if (divOpen == 1)
+            {
+                messageDiv.innerHTML += inner;
+                var objDiv = document.getElementById('msgs');                                                       //ZESKROLLUJ OBRAZ W DOŁ
+                if (objDiv.scrollHeight - objDiv.scrollTop - messageDiv.clientHeight < 600) {
+                    objDiv.scrollTop = objDiv.scrollHeight;
+                }
+            }
+
+        }
+
+        function whoIsOnline(parameter) {
+            var array = parameter.split(",");
+
+            for (var i = 0; i < friends.length; i++)
+            {
+                document.getElementById(friends[i].SenderID).style.display = 'none';
+            }
+            if (document.getElementById(friendId + 'c') != null)                        
+            {
+                document.getElementById(friendId + 'c').style.display = 'none';                 //Current friend
+            }
+
+            if (array.length > 0)
+            {
+                for (var j = 0; j < array.length-1; j++) {
+                    document.getElementById(array[j]).style.display = 'block';
+                    if (j == friendId)
+                    {
+                        if (document.getElementById(friendId + 'c') != null) {      
+                            document.getElementById(friendId + 'c').style.display = 'block';    //Current friend
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+</script>
+}

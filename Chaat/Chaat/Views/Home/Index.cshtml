@@ -1,0 +1,330 @@
+﻿@model Chaat.Models.Users.User
+@using Microsoft.Extensions.WebEncoders;
+@using System.Text.Encodings.Web;
+
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await Html.PartialAsync("Content")
+
+<script>
+    addCookie();
+</script>
+
+@section Scripts {
+    
+    <script>
+        var socketTo = '@Model.AspUserID';                                                                                //SOCKET DO KTOREGO WYSYLAMY WIADOMOSC
+        var friendIndex = 0;
+        var notificationsIndex = 0;
+        var sendReadInfo = 0;
+
+    $(function initialize() {
+        var userName = '@Model.Name';
+        var protocol = location.protocol === "https:" ? "wss:" : "ws:";
+        var wsUri = protocol + "//" + window.location.host;
+        var socket = new WebSocket(wsUri);
+        socket.onopen = e => {
+            console.log("socket opened", e);
+        };
+
+        socket.onclose = function (e) {
+            console.log("socket closed", e);
+        };
+
+
+        //ODBIOR MESSAGE
+        socket.onmessage = function (e) {                                                                   //ODBIOR WIADOMOSCI
+            
+            var oMessage = JSON.parse(e.data);                                                              //WIADOMOŚC NA JSON
+            console.log(oMessage.Body);
+            var addToDiv = 0;
+            if (oMessage.SenderID == friendIndex || oMessage.SenderID == @Model.Id)                         //NOTIFICATION: Sprawdzamy czy okienko u kolegi do ktorego piszemy jest otwarte, jak nie to ślemy notification
+            {
+                addToDiv = 1;
+            }
+            else
+            {
+                addToDiv = 0;
+            }
+
+            if (sendReadInfo == 1) {                                                                        //Jesli odczytałem wiadomość z powiadomień
+                sendMessageViewed(e);
+                sendReadInfo = 0;
+            }
+            
+            if (addToDiv == 1 && oMessage.Body == '##Odczytano') {
+                addMessageViewed(oMessage);
+                return;
+            }
+            var isWritting = checkIfWritting(oMessage);                                                     //Czy wiadomość jest w trakcie pisania?
+            if (isWritting == 1)                                                                            //Tak jest
+            {
+                var element = document.getElementById("is-writting");                                       //Sprawdzamy czy użytkownik jest poinformowany
+                if (element == null)                                                                        //O tym że drugi do niego pisze
+                {
+                    if (addToDiv == 0) return;
+                    createWrittingDiv(oMessage);                                                            //Jeśli nie ma takiej informacji to stwórz wiadomosć że pisze
+                }
+                return;
+            }
+            if (document.getElementById("is-writting") != null)                                             //Jeśli wiadomość is-writting istnieje usuń ją, bo wiadomość jest juz gotowa
+            {
+                document.getElementById("is-writting").remove();
+            }
+
+            if (oMessage.SenderID < 0)
+            {
+                whoIsOnline(oMessage.Body);
+                return;
+            }
+            if (addToDiv == 1)
+            {
+                createMessageDiv(oMessage, addToDiv, friendId);                                             //TWORZENIE DIV WIADOMOSCI
+                if (oMessage.SenderID != @Model.Id)
+                {
+                    sendMessageViewed();
+                }
+
+                if (document.getElementById("odczytano") != null)                                             //Jeśli wiadomość is-writting istnieje usuń ją, bo wiadomość jest juz gotowa
+                {
+                    document.getElementById("odczytano").remove();
+                }
+            }
+            else
+            {
+                createMessageDiv(oMessage, addToDiv, oMessage.SenderID);                                    //NOTIFICATION
+                notificationsIndex++;
+                addNotification(oMessage);
+                var element = document.getElementById("notification-index");
+                element.style.display = 'block';
+                element.innerHTML = notificationsIndex;
+                audio.play();
+            }
+
+
+        };
+
+        socket.onerror = function (e) {
+            console.error(e.data);
+        };
+
+
+        //Wysyłanie inputu
+        $('#MessageField').keypress(function (e) {
+            if (e.which != 13 || $('#MessageField').val() == "") {
+                if (document.getElementById("is-writting") == null)
+                {
+                    isWitting(e);
+                }
+                return;
+            }
+            sendMessage(e);                                                                                     //WYŚLIJ WIADOMOŚC
+        });
+
+        function sendMessage(e) {
+            e.preventDefault();
+            console.log(socket);
+            var message = '{ "Body": "' + $('#MessageField').val() + '", "PhotoLink": "' + img_src + '", "SenderID": "' +@Model.Id+'", "SocketTo": "' + socketTo + '" }';
+            socket.send(message);
+            $('#MessageField').val('');
+            window.scrollTo(0, document.body.scrollHeight);
+            return false;
+        }
+
+        function isWitting(e) {
+            var message = '{ "Body": "##Pisze...", "PhotoLink": "' + img_src + '", "SenderID": "' +@Model.Id+'", "SocketTo": "' + socketTo + '" }';
+            socket.send(message);
+            return false;
+        }
+
+        function sendMessageViewed(e)
+        {
+            var message = '{ "Body": "##Odczytano", "PhotoLink": "' + img_src + '", "SenderID": "' +@Model.Id+'", "SocketTo": "' + socketTo + '" }';
+            socket.send(message);
+            return false;
+        }
+
+        });
+
+        //ZMIENNE----------------------------------------------------------
+
+        /*POTEM BEDZIE MOZNA USUNAC JAK BEDZIE BAZA DANYCH i IDUżytkownika*/
+        var last_message;
+        ///////////////////////////////////////////////////////
+
+        //Czy jest focus? Jak nie to daj dźwięk
+        var audio = new Audio('/sounds/notification.wav');
+        
+        //TEST AVATAROW
+        var img_src = '@Model.PhotoLink';
+        //-----------------------------------------------------------------
+
+        //Sprawdza ciąg znaków od spacji do spacji (dla emoticons)
+        function addEmoticons(array) {
+
+            var returnText = '';
+            for (var i = 0; i < array.length; i++)
+            {
+                returnText += findEmoticons(array[i]);
+            }
+            return returnText;
+        }
+
+        //sprawdza czy przekazany string odpowiada którejś emoticonie
+        function findEmoticons(emot) {
+            emot = ' ' + emot;
+            switch (emot) {
+                case ' :)':
+                    return ' <img src="/images/emoticons/e_smile.png"/>';
+                case ' :D':
+                case ' :d':
+                case ' ;D':
+                case ' ;d':
+                    return ' <img src="/images/emoticons/e_laugh_basic.png"/>';
+                case ' :p':
+                case ' :P':
+                case ' ;p':
+                case ' ;P':
+                    return '<img src="/images/emoticons/e_tongue.png"/>';
+                case ' xd':
+                case ' xD':
+                case ' XD':
+                case ' Xd':
+                    return ' <img src="/images/emoticons/e_laugh_extreme.png"/>';
+                case ' :(':
+                    return ' <img src="/images/emoticons/e_sad.png"/>';
+                case ' ;(':
+                    return ' <img src="/images/emoticons/e_cry.png"/>';
+                case ' ;/':
+                case ' :/':
+                    return ' <img src="/images/emoticons/e_worried.png"/>';
+                case ' :*':
+                case ' ;*':
+                    return ' <img src="/images/emoticons/e_kiss.png"/>';
+                default:
+                    return emot;
+            }
+
+        }
+
+
+
+        function addMessageViewed(oMessage)
+        {
+            if (oMessage.SenderID != @Model.Id)
+            {
+                var messageDiv = document.getElementById('message-table');
+                var inner = '<tr id="odczytano"><td><img style="float:left" src="/images/img_viewd.png" width="20" height="20" /><p style="color:#b1b1b1"><em>Wyświetlono ' + getDate() + '</em></p></td></tr>';
+                messageDiv.innerHTML += inner;
+            }
+        }
+
+        //Tworzy Nowy Div wiadomości
+        function createMessageDiv(oMessage, divOpen, index)
+        {
+            var style;
+            var color;
+            var p_style;
+            if (oMessage.SenderID == @Model.Id) {
+                style = 'style="float:left"';
+                color = 'color:white';
+                p_style = 'style="font-size:70%; color:black; float:left; margin-top:-25px"';
+            }
+            else {
+                style = 'style="background-color:lightgray; border-width: thin; border-color:#c3c3c3; color:#1f1f1f; float:right"';
+                color = 'color:#7e7a8b';
+                p_style = 'style="font-size:70%; color:black; float:right; margin-top:-25px"';
+                audio.play();
+            }
+            var array = oMessage.Body.split(" ");                                                               //DZIELENIE WIADOMOŚCI
+
+            var message = addEmoticons(array);                                                                  //DODANIE EMOTICONS
+
+
+
+            var messageDiv = document.getElementById('message-table');                                          //DODANIE DIV Z WIADOMOŚCIĄ
+            var inner = '<tr><td><img class="img-profile" ' + style + ' src="' + oMessage.PhotoLink + '" /><div class="msg" ' + style + '"><p ' + p_style + '>' + getDate() + '</p>' + message + '</div></td></tr>';
+            messages[index] += inner;
+            if (divOpen == 1)
+            {
+                messageDiv.innerHTML += inner;
+                var objDiv = document.getElementById('msgs');                                                       //ZESKROLLUJ OBRAZ W DOŁ
+                if (objDiv.scrollHeight - objDiv.scrollTop - messageDiv.clientHeight < 600) {
+                    objDiv.scrollTop = objDiv.scrollHeight;
+                }
+            }
+        }
+
+        function checkIfWritting(message) {
+            if (message.Body == '##Pisze...') {
+                return 1;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+
+        function createWrittingDiv(oMessage, divOpen, index)
+        {
+            var style;
+            var color;
+            var p_style;
+            if (oMessage.SenderID != @Model.Id) {
+                style = 'style="background-color:lightgray; border-width: thin; border-color:#c3c3c3; color:#1f1f1f; float:right"';
+                color = 'color:#7e7a8b';
+                p_style = 'style="font-size:70%; color:black; float:right; margin-top:-25px"';
+                var messageDiv = document.getElementById('message-table');
+                var inner = '<tr id="is-writting"><td><img class="img-profile" ' + style + ' src="' + oMessage.PhotoLink + '" /><div class="msg" ' + style + '"><p ' + p_style + '></p>Pisze...</div></td></tr>';
+                messageDiv.innerHTML += inner;
+            }
+        }
+
+        function getDate()                                                                          //GODZINA
+        {
+            var date = new Date();
+            var hour = date.getHours();
+            var minute = date.getMinutes();
+            var second = date.getSeconds();
+            return (hour < 10 ? "0" + hour : hour) + ":" + (minute < 10 ? "0" + minute : minute) + ":" + (second < 10 ? "0" + second : second);
+        }
+
+        function whoIsOnline(parameter) {
+            var array = parameter.split(",");
+
+            for (var i = 0; i < friends.length; i++)
+            {
+                document.getElementById(friends[i].SenderID + 'i').style.display = 'none';
+            }
+            if (document.getElementById(friendId + 'c') != null)
+            {
+                document.getElementById(friendId + 'c').style.display = 'none';                 //Current friend
+            }
+
+            if (array.length > 0)
+            {
+                for (var j = 0; j < array.length-1; j++) {
+                    document.getElementById(array[j] + 'i').style.display = 'block';
+                    if (array[j] == friendId)
+                    {
+                        if (document.getElementById(friendId + 'c') != null) {
+                            document.getElementById(friendId + 'c').style.display = 'block';    //Current friend
+                        }
+                    }
+                }
+            }
+        }
+
+        Element.prototype.remove = function () {
+            this.parentElement.removeChild(this);
+        }
+        NodeList.prototype.remove = HTMLCollection.prototype.remove = function () {
+            for (var i = this.length - 1; i >= 0; i--) {
+                if (this[i] && this[i].parentElement) {
+                    this[i].parentElement.removeChild(this[i]);
+                }
+            }
+        }
+
+
+</script>
+}

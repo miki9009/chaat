@@ -1,0 +1,45 @@
+﻿@model ApplicationUser
+
+
+<h2 style="color:red">@ViewData["Email"]</h2>
+
+<div  class="container" >
+
+    <div class="chaat-div" style="margin-top:30px">
+        <h3 class="chaat-title">Aktywuj konto</h3>
+
+        <p style="text-align:center; margin-top:40px; margin-bottom:100px"><strong>Aby dokończyć aktywację konta kliknij na link wysłany na adres e-mail podany przy rejestracji.</strong></p>
+        <a asp-action="ResendMail" >Prześlij ponownie</a>
+    </div>
+
+
+
+</div>
+
+<!--<h2 style="color:red"></h2>
+
+<div  class="container" >
+
+    <div class="chaat-div form-inline" style="margin-top:30px">
+        <h3 class="chaat-title">Aktywuj konto</h3>
+        <form asp-controller="Account" asp-action="Activate" method="post" class="form-horizontal">
+
+            <div class="form-group" style="margin:30px -10px 20px 20px">
+                <label class="col-md-5 control-label">Kod aktywacyjny:</label>
+                <div class="col-md-3">
+                    <input class="form-control" />
+                    <span asp-validation-for="Code" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="col-md-offset-2 col-md-10">
+                    <button type="submit" class="chaat-button">Potwierdź</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+
+
+</div>-->
